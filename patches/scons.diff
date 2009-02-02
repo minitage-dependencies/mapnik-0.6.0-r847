@@ -1,0 +1,50 @@
+Index: SConstruct
+===================================================================
+--- SConstruct	(révision 847)
++++ SConstruct	(copie de travail)
+@@ -123,6 +123,16 @@
+ # Create clean environment with only the options within this SConstruct file
+ color_print(4,'Constructing build environment...')
+ env = Environment(options=opts)
++##############################################################################################################################
++# HACK
++my_cflags  = env.ParseFlags(os.environ.get('CFLAGS', '') + os.environ.get('CPPFLAGS', '') +  os.environ.get('CXXFLAGS', ''))
++my_ldflags = env.ParseFlags(os.environ.get('LDFLAGS', ''))
++os.environ['CFLAGS'] = ''
++os.environ['CPPFLAGS'] = ''
++os.environ['CXXFLAGS'] = ''
++os.environ['LDFLAGS'] = ''
++# END HACK
++############################################################################################################################# 
+ 
+ # Unless USE_USER_ENV=False, recreate the base environment
+ # using all variables (for example) in the shell users .profile or /etc/profile
+@@ -206,6 +216,28 @@
+ env['CPPPATH'] = ['#tinyxml', '#include', '#']
+ env['LIBPATH'] = ['#src']
+ 
++#############################################################################################################################
++# HACK
++if not 'CPPPATH' in env:
++    env['CPPPATH'] = []
++for inc in my_cflags.get('CPPPATH', []):
++    #uniq_add(env, 'CPPPATH', inc)
++    env.Append(CCFLAGS=' -I%s ' % inc)
++if not 'LIBPATH' in env:
++    env['LIBPATH'] = []
++if not 'SHLINKFLAGS' in env:
++    env['SHLINKFLAGS'] = []
++for lib in my_ldflags['LIBPATH']:
++    uniq_add(env, 'LIBPATH', lib)
++#    uniq_add(env, 'SHLINKFLAGS', lib)
++if not 'RPATH' in env:
++    env['RPATH'] = []
++for lib in my_ldflags.get('LINKFLAGS', []):
++    if lib.strip() != '-Wl,-rpath':
++        env.Append(LINKFLAGS=env.Literal("-Wl,-rpath,%s"%lib.replace('-Wl,', '')))
++# END HACK
++#############################################################################################################################
++ 
+ # Solaris & Sun Studio settings (the `SUNCC` flag will only be
+ # set if the `CXX` option begins with `CC`)
+ SOLARIS = env['PLATFORM'] == 'SunOS'
